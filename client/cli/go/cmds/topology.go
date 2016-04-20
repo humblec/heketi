@@ -47,6 +47,8 @@ func init() {
 	topologyLoadCommand.Flags().StringVarP(&jsonConfigFile, "json", "j", "",
 		"\n\tConfiguration containing devices, nodes, and clusters, in"+
 			"\n\tJSON format.")
+	topologyLoadCommand.SilenceUsage = true
+	topologyInfoCommand.SilenceUsage = true
 }
 
 var topologyCommand = &cobra.Command{
@@ -56,9 +58,10 @@ var topologyCommand = &cobra.Command{
 }
 
 var topologyLoadCommand = &cobra.Command{
-	Use:   "load",
-	Short: "Add devices to Heketi from a configuration file",
-	Long:  "Add devices to Heketi from a configuration file",
+	Use:     "load",
+	Short:   "Add devices to Heketi from a configuration file",
+	Long:    "Add devices to Heketi from a configuration file",
+	Example: "heketi-cli topology load --json=topo.json",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Check arguments
 		if jsonConfigFile == "" {
@@ -116,9 +119,10 @@ var topologyLoadCommand = &cobra.Command{
 }
 
 var topologyInfoCommand = &cobra.Command{
-	Use:   "info",
-	Short: "Retreives information about the current Topology",
-	Long:  "Retreives information about the current Topology",
+	Use:     "info",
+	Short:   "Retreives information about the current Topology",
+	Long:    "Retreives information about the current Topology",
+	Example: "heketi-cli topology info",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Create a client to talk to Heketi
 		heketi := client.NewClient(options.Url, options.User, options.Key)
