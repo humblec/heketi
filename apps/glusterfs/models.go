@@ -25,6 +25,25 @@ import (
 	"sort"
 )
 
+//Topology
+
+type Node struct {
+	NodeInfo NodeInfoResponse `json:"nodeinfo"`
+}
+
+type Nodes struct {
+	Nodes []Node
+}
+
+type Cluster struct {
+	Id       string `json:"id"`
+	NodeList Nodes  `json:"nodes"`
+}
+
+type Topo struct {
+	ClusterList []Cluster `json:"clusters"`
+}
+
 // Storage values in KB
 type StorageSize struct {
 	Total uint64 `json:"total"`

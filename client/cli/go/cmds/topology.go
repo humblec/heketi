@@ -20,11 +20,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-
 	"github.com/heketi/heketi/apps/glusterfs"
-	client "github.com/heketi/heketi/client/api/go-client"
+	"github.com/heketi/heketi/client/api/go-client"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 var jsonConfigFile string
@@ -42,18 +41,24 @@ type ConfigFile struct {
 }
 
 func init() {
-	RootCmd.AddCommand(loadCommand)
-	loadCommand.Flags().StringVarP(&jsonConfigFile, "json", "j", "",
+	RootCmd.AddCommand(topologyCommand)
+	topologyCommand.AddCommand(topologyLoadCommand)
+	topologyCommand.AddCommand(topologyInfoCommand)
+	topologyLoadCommand.Flags().StringVarP(&jsonConfigFile, "json", "j", "",
 		"\n\tConfiguration containing devices, nodes, and clusters, in"+
 			"\n\tJSON format.")
-	loadCommand.SilenceUsage = true
 }
 
-var loadCommand = &cobra.Command{
-	Use:     "load",
-	Short:   "Add devices to Heketi from a configuration file",
-	Long:    "Add devices to Heketi from a configuration file",
-	Example: "  $ heketi-cli load --json=topology.json",
+var topologyCommand = &cobra.Command{
+	Use:   "topology",
+	Short: "Heketi Topology Management",
+	Long:  "Heketi Topology management",
+}
+
+var topologyLoadCommand = &cobra.Command{
+	Use:   "load",
+	Short: "Add devices to Heketi from a configuration file",
+	Long:  "Add devices to Heketi from a configuration file",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Check arguments
 		if jsonConfigFile == "" {
@@ -106,6 +111,77 @@ var loadCommand = &cobra.Command{
 				}
 			}
 		}
+		return nil
+	},
+}
+
+var topologyInfoCommand = &cobra.Command{
+	Use:   "info",
+	Short: "Retreives information about the current Topology",
+	Long:  "Retreives information about the current Topology",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Create a client to talk to Heketi
+		heketi := client.NewClient(options.Url, options.User, options.Key)
+
+		// Create Topology
+
+		topoinfo, err := heketi.TopologyInfo()
+		if err != nil {
+			return err
+		}
+
+		// Check if JSON should be printed
+		if options.Json {
+			data, err := json.Marshal(topoinfo)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(stdout, string(data))
+		} else {
+
+			for i, _ := range topoinfo.ClusterList {
+
+				fmt.Fprintf(stdout, "Cluster Id: %v\n", topoinfo.ClusterList[i].Id)
+				for j, _ := range topoinfo.ClusterList[i].NodeList.Nodes {
+					info := topoinfo.ClusterList[i].NodeList.Nodes[j].NodeInfo
+					fmt.Fprintf(stdout, "\n\tNode Id: %v\n"+
+						"\tCluster Id: %v\n"+
+						"\tZone: %v\n"+
+						"\tManagement Hostname: %v\n"+
+						"\tStorage Hostname: %v\n",
+						info.Id,
+						info.ClusterId,
+						info.Zone,
+						info.Hostnames.Manage[0],
+						info.Hostnames.Storage[0])
+					fmt.Fprintf(stdout, "\tDevices:\n")
+					for j, d := range info.DevicesInfo {
+						fmt.Fprintf(stdout, "\t\tId:%-35v"+
+							"Name:%-20v"+
+							"Size (GiB):%-8v"+
+							"Used (GiB):%-8v"+
+							"Free (GiB):%-8v\n",
+							d.Id,
+							d.Name,
+							d.Storage.Total/(1024*1024),
+							d.Storage.Used/(1024*1024),
+							d.Storage.Free/(1024*1024))
+
+						fmt.Fprintf(stdout, "\t\t\tBricks:\n")
+						for _, d := range info.DevicesInfo[j].Bricks {
+							fmt.Fprintf(stdout, "\t\t\t\tId:%-35v"+
+								"Size (GiB):%-8v"+
+								"Path: %v\n",
+								d.Id,
+								d.Size/(1024*1024),
+								d.Path)
+						}
+					}
+				}
+			}
+
+		}
+
 		return nil
 	},
 }
